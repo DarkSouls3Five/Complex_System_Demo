@@ -280,7 +280,7 @@ static void trans_control_loop(trans_act_t *trans_act_control)
 //					
 		}
 		
-		//计算完毕，发电流
+		//计算完毕，打包发送三个电机电流
 		CAN_cmd_can1(trans_act_control->motor_data[0].give_current,trans_act_control->motor_data[1].give_current,trans_act_control->motor_data[1].give_current);
 }
 
