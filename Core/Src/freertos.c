@@ -54,6 +54,7 @@ osThreadId ServoTaskHandle;
 osThreadId Infrared_DetectHandle;
 osThreadId Ultrasonic_DeteHandle;
 osThreadId TranslateTaskHandle;
+osThreadId ModeSetTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -67,6 +68,7 @@ void Servo_Task(void const * argument);
 void infrared_task(void const * argument);
 void ultrasonic_task(void const * argument);
 void translate_task(void const * argument);
+void mode_set_task(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -136,6 +138,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of TranslateTask */
   osThreadDef(TranslateTask, translate_task, osPriorityIdle, 0, 128);
   TranslateTaskHandle = osThreadCreate(osThread(TranslateTask), NULL);
+
+  /* definition and creation of ModeSetTask */
+  osThreadDef(ModeSetTask, mode_set_task, osPriorityIdle, 0, 128);
+  ModeSetTaskHandle = osThreadCreate(osThread(ModeSetTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -235,6 +241,24 @@ __weak void translate_task(void const * argument)
     osDelay(1);
   }
   /* USER CODE END translate_task */
+}
+
+/* USER CODE BEGIN Header_mode_set_task */
+/**
+* @brief Function implementing the ModeSetTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_mode_set_task */
+__weak void mode_set_task(void const * argument)
+{
+  /* USER CODE BEGIN mode_set_task */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END mode_set_task */
 }
 
 /* Private application code --------------------------------------------------*/

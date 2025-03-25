@@ -21,7 +21,7 @@
 #include "CAN_bus.h"
 #include "remote_control.h"
 #include "user_lib.h"
-
+#include "mode_set_task.h"
 
 
 double fabs(double a)
@@ -105,10 +105,15 @@ static void trans_PID_init(trans_PID_t *pid, fp32 maxout, fp32 max_iout, fp32 kp
 static fp32 trans_PID_calc(trans_PID_t *pid, fp32 get, fp32 set, fp32 error_delta);
 
 trans_act_t trans_act;
+float trans_distance[2];//状态切换前记录电机绝对角度
+float trans_distance1,trans_distance2;
+uint8_t trans_motor_number;//将要执行动作的电机序号
 
-
+/*外部引用一系列变量*/
 extern void init_ecd_record(motor_measure_t *motor_2006);//电机绝对角度初始化
 extern motor_measure_t motor_data[9];//引用电机数据
+extern garbage_mode_t garbage_mode;//引用工作模式
+extern uint8_t infrared_return;//引用红外传感器数据
 
 /**
   * @brief          runner_task
@@ -157,6 +162,9 @@ static void trans_init(trans_act_t *trans_act_init)
         return;
     }
 
+		//初始化电机编号
+		trans_motor_number=0;
+		
     //初始化横移机构模式
 		trans_act_init->last_trans_mode = trans_act_init->trans_mode = TRANS_FREE;
 		//读取速度pid数值
@@ -191,7 +199,33 @@ static void trans_init(trans_act_t *trans_act_init)
   */
 static void trans_set_mode(trans_act_t *trans_act_mode)
 {
-
+    if (trans_act_mode == NULL)
+    {
+        return;
+    }
+		//工作模式
+		if(garbage_mode.garbage_mode == MODE_WORK)
+		{
+			if(infrared_return == 1)
+			//区域1装满
+			{
+				trans_act_mode->trans_mode = TRANS_MOVE_L;
+				trans_motor_number = 0;//电机1执行动作
+			}
+			
+			else if(infrared_return == 2)
+			//区域2装满
+			{
+				trans_act_mode->trans_mode = TRANS_MOVE_L;				
+				trans_motor_number = 1;//电机2执行动作
+			}
+			else
+				trans_act_mode->trans_mode = TRANS_LOCK;			
+		}
+			
+		//自由模式
+		else
+			trans_act_mode->trans_mode = TRANS_FREE;
 }
 
 /**
@@ -231,23 +265,40 @@ static void trans_feedback_update(trans_act_t *trans_act_update)
   */
 static void trans_mode_change_control_transit(trans_act_t *trans_act_transit)
 {
-	if(trans_act_transit == NULL)
-	{
-		return;
-	}
+		if(trans_act_transit == NULL)
+		{
+			return;
+		}
 
-	if(trans_act_transit->trans_mode == TRANS_LOCK_L && 
-		trans_act_transit->last_trans_mode == TRANS_MOVE_L)
-	{
-		trans_act_transit->motor_data[0].motor_ecd_set = trans_act_transit->motor_data[0].motor_ecd;
-	}
-	
-	if(trans_act_transit->trans_mode == TRANS_LOCK_R && 
-		trans_act_transit->last_trans_mode == TRANS_MOVE_R)
-	{
-		trans_act_transit->motor_data[0].motor_ecd_set = trans_act_transit->motor_data[0].motor_ecd;
-	}
+		if(trans_act_transit->trans_mode == TRANS_LOCK && (trans_act_transit->last_trans_mode == TRANS_FREE))
+		//状态由自由模式切换至锁死，记录当前电机绝对角度并设为目标值
+		{
+			for (uint8_t i = 0; i < 2; i++)
+			{
+				trans_distance[i] = trans_act_transit->motor_data[i].trans_motor_measure->distance;
+			}
+		}
+		if((trans_act_transit->trans_mode == TRANS_MOVE_L || trans_act_transit->trans_mode == TRANS_MOVE_R) 
+			  && trans_act_transit->last_trans_mode == TRANS_LOCK)
+		//状态由锁死切换至移动模式，将当前绝对角度赋值给trans_distance
+		{
+			for (uint8_t i = 0; i < 2; i++)
+			{
+				trans_distance[i] = trans_act_transit->motor_data[i].trans_motor_measure->distance;
+			}
+		}
 		
+		if(trans_act_transit->trans_mode == TRANS_LOCK && 
+			(trans_act_transit->last_trans_mode == TRANS_MOVE_L ||trans_act_transit->last_trans_mode == TRANS_MOVE_R))
+		//状态由移动模式切换至锁死，记录当前电机绝对角度并设为目标值
+		{
+			for (uint8_t i = 0; i < 2; i++)
+			{
+				trans_distance[i] = trans_act_transit->motor_data[i].trans_motor_measure->distance;
+			}
+		}
+		trans_distance1=trans_distance[0];
+		trans_distance2=trans_distance[1];
 }
 	
 /**
@@ -263,22 +314,74 @@ static void trans_mode_change_control_transit(trans_act_t *trans_act_transit)
 
 static void trans_control_loop(trans_act_t *trans_act_control)
 {
-	/*自由状态*/
-	if (trans_act_control->trans_mode == TRANS_FREE)
+	//电机速度
+		static fp32 motor_speed = 0;
+	
+	/*自由状态，发送电流值为0*/
+		if (trans_act_control->trans_mode == TRANS_FREE)
 		{
-			trans_act_control->motor_data[0].give_current = 0;
-			trans_act_control->motor_data[1].give_current = 0;
+			for (uint8_t i = 0; i < 2; i++)
+			{
+				trans_act_control->motor_data[i].give_current = 0;			
+			}				
+	}
+				
+		/*向左移动状态*/
+		else if(trans_act_control->trans_mode == TRANS_MOVE_L)
+		{
+			motor_speed = TRANS_SET_SPEED;
 			
-			//测一下固定转速
-//			trans_act_control->motor_data[0].motor_speed_set = 100.0f;
-//			trans_act_control->motor_data[0].give_current = (int16_t)PID_calc(&trans_act_control->trans_speed_pid, 
-//																												trans_act_control->motor_data[0].motor_speed, trans_act_control->motor_data[0].motor_speed_set);
-//			
-//			trans_act_control->motor_data[1].motor_speed_set = 100.0f;
-//			trans_act_control->motor_data[1].give_current = (int16_t)PID_calc(&trans_act_control->trans_speed_pid, 
-//																												trans_act_control->motor_data[1].motor_speed, trans_act_control->motor_data[1].motor_speed_set);
-//					
+			if(fabs(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_distance[trans_motor_number]) - TRANS_MOVE_ANGLE) < TRANS_ERR)
+			//移动即将到位时改用位置环
+			{
+				trans_act_control->motor_data[trans_motor_number].give_current = trans_PID_calc(&trans_act_control->trans_angle_pid, 
+																											                trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance, 
+																											                trans_distance[trans_motor_number] + TRANS_MOVE_ANGLE, 
+																											                trans_act_control->motor_data[trans_motor_number].motor_speed);	
+			}
+			else
+			//移动中使用单速度环			
+			{
+				trans_act_control->motor_data[trans_motor_number].motor_speed_set = motor_speed;
+				trans_act_control->motor_data[trans_motor_number].give_current = (int16_t)PID_calc(&trans_act_control->trans_speed_pid, 
+																													trans_act_control->motor_data[trans_motor_number].motor_speed, trans_act_control->motor_data[trans_motor_number].motor_speed_set);			
+			}
+		}	
+
+
+		/*向右移动状态*/
+		else if(trans_act_control->trans_mode == TRANS_MOVE_R)
+		{
+			motor_speed = -TRANS_SET_SPEED;
+			
+			if(fabs(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_distance[trans_motor_number]) + TRANS_MOVE_ANGLE) < TRANS_ERR)
+			//移动即将到位时改用位置环
+			{
+				trans_act_control->motor_data[trans_motor_number].give_current = trans_PID_calc(&trans_act_control->trans_angle_pid, 
+																											                trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance, 
+																											                trans_distance[trans_motor_number] + TRANS_MOVE_ANGLE, 
+																											                trans_act_control->motor_data[trans_motor_number].motor_speed);	
+			}
+			else
+			{
+			//移动中使用单速度环
+				trans_act_control->motor_data[trans_motor_number].motor_speed_set = motor_speed;
+				trans_act_control->motor_data[trans_motor_number].give_current = (int16_t)PID_calc(&trans_act_control->trans_speed_pid, 
+																													trans_act_control->motor_data[trans_motor_number].motor_speed, trans_act_control->motor_data[trans_motor_number].motor_speed_set);			
+			}		
 		}
+			
+		/*锁死状态，使用角度环单环控制电机锁紧在当前绝对角度下*/		
+		else if(trans_act_control->trans_mode == TRANS_LOCK)
+		{
+			for (uint8_t i = 0; i < 2; i++)	
+			{
+				trans_act_control->motor_data[i].give_current = trans_PID_calc(&trans_act_control->trans_angle_pid, 
+																																				trans_act_control->motor_data[i].trans_motor_measure->distance, 
+																																				trans_distance[i], 
+																																				trans_act_control->motor_data[i].motor_speed);				
+			}
+	}
 		
 		//计算完毕，打包发送三个电机电流
 		CAN_cmd_can1(trans_act_control->motor_data[0].give_current,trans_act_control->motor_data[1].give_current,trans_act_control->motor_data[1].give_current);

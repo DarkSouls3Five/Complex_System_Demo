@@ -51,4 +51,5 @@ zero\translate_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers
 zero\translate_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 zero\translate_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 zero\translate_task.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
-zero\translate_task.o: ..\algorithm\user_lib.h
+zero\translate_task.o: ../algorithm/user_lib.h
+zero\translate_task.o: ..\Applications\mode_set_task.h
