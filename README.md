@@ -9,5 +9,8 @@ The outline of this demo code:
       |——Infrared_Detect
       |——Ultrasonic_Dete
       |——TranslateTask
+      |——ModeSetTask
+      |——buzzer_task
+      |——LedFlowTask
 
 ```

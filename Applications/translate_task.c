@@ -105,8 +105,8 @@ static void trans_PID_init(trans_PID_t *pid, fp32 maxout, fp32 max_iout, fp32 kp
 static fp32 trans_PID_calc(trans_PID_t *pid, fp32 get, fp32 set, fp32 error_delta);
 
 trans_act_t trans_act;
-float trans_distance[2];//状态切换前记录电机绝对角度
-float trans_distance1,trans_distance2;
+float trans_distance[2];//记录电机状态切换前的绝对角度
+float trans_distance1,trans_distance2;//debug看的，没啥用
 uint8_t trans_motor_number;//将要执行动作的电机序号
 
 /*外部引用一系列变量*/

@@ -107,9 +107,19 @@ int main(void)
   MX_USART3_UART_Init();
   MX_TIM8_Init();
   MX_CAN2_Init();
+  MX_TIM4_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_PWM_Start(&htim1,TIM_CHANNEL_1);
+	//定时器开始工作
 	HAL_TIM_Base_Start_IT(&htim7);
+	HAL_TIM_Base_Start(&htim4);
+	HAL_TIM_PWM_Start(&htim4,TIM_CHANNEL_3);		//开启蜂鸣器对应的定时器4通道3
+	HAL_TIM_Base_Start(&htim5);
+  HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_3);
+	//can过滤器
 	can_filter_init();
 	HAL_UART_Receive_DMA(&huart3,sbus_buf,18);
 	
@@ -117,6 +127,7 @@ int main(void)
   HAL_TIM_IC_Start_IT(&htim8,TIM_CHANNEL_2);   //开启TIM8的通道2，并且开启捕获中断	
   HAL_TIM_IC_Start_IT(&htim8,TIM_CHANNEL_3);   //开启TIM8的通道3，并且开启捕获中断
   __HAL_TIM_ENABLE_IT(&htim8,TIM_IT_UPDATE);   //使能更新中断
+	
 
                         
   /* USER CODE END 2 */

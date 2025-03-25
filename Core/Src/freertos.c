@@ -25,7 +25,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "LEDTask.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,26 +48,27 @@ osThreadId LED_GreenHandle;
 osThreadId MotorTaskHandle;
 /* USER CODE END Variables */
 osThreadId defaultTaskHandle;
-osThreadId LED_BlueHandle;
 osThreadId ServoTaskHandle;
 osThreadId Infrared_DetectHandle;
 osThreadId Ultrasonic_DeteHandle;
 osThreadId TranslateTaskHandle;
 osThreadId ModeSetTaskHandle;
+osThreadId buzzer_taskHandle;
+osThreadId LedFlowTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
-void LED_Green_task(void const * argument);
 
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void const * argument);
-extern void LED_Blue_task(void const * argument);
 void Servo_Task(void const * argument);
 void infrared_task(void const * argument);
 void ultrasonic_task(void const * argument);
 void translate_task(void const * argument);
 void mode_set_task(void const * argument);
+void Buzzer_Task(void const * argument);
+void led_RGB_flow_task(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -119,10 +119,6 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
-  /* definition and creation of LED_Blue */
-  osThreadDef(LED_Blue, LED_Blue_task, osPriorityNormal, 0, 128);
-  LED_BlueHandle = osThreadCreate(osThread(LED_Blue), NULL);
-
   /* definition and creation of ServoTask */
   osThreadDef(ServoTask, Servo_Task, osPriorityHigh, 0, 128);
   ServoTaskHandle = osThreadCreate(osThread(ServoTask), NULL);
@@ -143,10 +139,17 @@ void MX_FREERTOS_Init(void) {
   osThreadDef(ModeSetTask, mode_set_task, osPriorityIdle, 0, 128);
   ModeSetTaskHandle = osThreadCreate(osThread(ModeSetTask), NULL);
 
+  /* definition and creation of buzzer_task */
+  osThreadDef(buzzer_task, Buzzer_Task, osPriorityBelowNormal, 0, 128);
+  buzzer_taskHandle = osThreadCreate(osThread(buzzer_task), NULL);
+
+  /* definition and creation of LedFlowTask */
+  osThreadDef(LedFlowTask, led_RGB_flow_task, osPriorityNormal, 0, 128);
+  LedFlowTaskHandle = osThreadCreate(osThread(LedFlowTask), NULL);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
-  osThreadDef(LED_Green, LED_Green_task, osPriorityNormal, 0, 128);
-  LED_GreenHandle = osThreadCreate(osThread(LED_Green), NULL);
+
 	
 
   /* USER CODE END RTOS_THREADS */
@@ -259,6 +262,42 @@ __weak void mode_set_task(void const * argument)
     osDelay(1);
   }
   /* USER CODE END mode_set_task */
+}
+
+/* USER CODE BEGIN Header_Buzzer_Task */
+/**
+* @brief Function implementing the buzzer_task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_Buzzer_Task */
+__weak void Buzzer_Task(void const * argument)
+{
+  /* USER CODE BEGIN Buzzer_Task */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END Buzzer_Task */
+}
+
+/* USER CODE BEGIN Header_led_RGB_flow_task */
+/**
+* @brief Function implementing the LedFlowTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_led_RGB_flow_task */
+__weak void led_RGB_flow_task(void const * argument)
+{
+  /* USER CODE BEGIN led_RGB_flow_task */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END led_RGB_flow_task */
 }
 
 /* Private application code --------------------------------------------------*/
