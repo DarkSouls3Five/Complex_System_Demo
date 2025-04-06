@@ -26,18 +26,19 @@
 #define HALF_ECD_RANGE 4096
 #define ECD_RANGE 8192
 #define ECD2ANGLE 2 * 3.1415926535f / ECD_RANGE
-#define REDUCTION_GIMBAL 0.2871287f		//云台减速比
+#define REDUCTION_GIMBAL 1.0f		//云台减速比
 #define ECD2ANGLE_GIMBAL  REDUCTION_GIMBAL* 360.0f / ECD_RANGE
 
 
 /* GPIO send and receive ID */
 typedef enum
 {
-	  CAN_TX_REAR_ID = 0X1FF,
+	  CAN_TX_YAW_ID = 0X1FF,
 		CAN_TX_TRANS_ID = 0X200,//三个横移电机
     CAN_TRANS1_ID = 0x201,	
 		CAN_TRANS2_ID = 0x202,
 	  CAN_TRANS3_ID = 0x203,
+		CAN_YAW_ID = 0x208
 
 } can1_msg_id_e;
 
@@ -74,6 +75,7 @@ typedef struct
 
 extern void get_motor_measure(motor_measure_t *ptr, uint8_t *data);  
 extern void CAN_cmd_can1(int16_t motor1, int16_t motor2, int16_t motor3);
+extern void CAN_cmd_yaw(int16_t motor4);
 extern void CAN_cmd_can2(int16_t motor1, int16_t motor2, int16_t motor3);
 extern const motor_measure_t *get_motor_measure_point(uint8_t bus, uint16_t id); 
 

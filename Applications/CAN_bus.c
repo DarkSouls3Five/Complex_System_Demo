@@ -109,6 +109,12 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
 					M2006_absolute_position_cal(&motor_data[i]);										
 					break;
 				}	
+				case CAN_YAW_ID:
+				{
+					static uint8_t i = 4;
+					get_motor_measure(&motor_data[i], rx_data);											
+					break;
+				}				
 			}
 		}
 //		else if (hcan == &hcan2)
@@ -165,7 +171,7 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
   * @retval         none
   */
 /**
-* @brief            发送3个横移电机电机控制电流(0x205,0x206,0x207)
+* @brief            发送3个横移电机、yaw电机控制电流(0x205,0x206,0x207)
   * @param[in]      motor: (0x205)(0x206)(0x207) 3508电机控制电流, 范围 [-16384,16384]
   * @retval         none
   */
@@ -194,6 +200,34 @@ void CAN_cmd_can1(int16_t motor1, int16_t motor2, int16_t motor3)
   * @retval         none
   */
 /**
+* @brief            发送3个横移电机、yaw电机控制电流(0x205,0x206,0x207)
+  * @param[in]      motor: (0x205)(0x206)(0x207) 3508电机控制电流, 范围 [-16384,16384]
+  * @retval         none
+  */
+void CAN_cmd_yaw(int16_t motor4)
+{
+    uint32_t send_mail_box;
+    fric_left_tx_message.StdId = CAN_TX_YAW_ID;
+    fric_left_tx_message.IDE = CAN_ID_STD;
+    fric_left_tx_message.RTR = CAN_RTR_DATA;
+    fric_left_tx_message.DLC = 0x08;
+	
+    fric_left_can_send_data[0] = 0X00;
+    fric_left_can_send_data[1] = 0X00;
+    fric_left_can_send_data[2] = 0X00;
+    fric_left_can_send_data[3] = 0X00;
+    fric_left_can_send_data[4] = 0X00;
+    fric_left_can_send_data[5] = 0X00;
+    fric_left_can_send_data[6] = motor4 >> 8;
+    fric_left_can_send_data[7] = motor4;
+    HAL_CAN_AddTxMessage(&hcan1, &fric_left_tx_message, fric_left_can_send_data, &send_mail_box);
+}
+/**
+  * @brief          send control current of motor (0x205, 0x206, 0x207)
+  * @param[in]      motor1: (0x205)(0x206)(0x207) 3508 motor control current, range [-16384,16384] 
+  * @retval         none
+  */
+/**
 * @brief            发送can2上电机控制电流(0x205,0x206,0x207)
   * @param[in]      motor: (0x205)(0x206)(0x207) 3508电机控制电流, 范围 [-16384,16384]
   * @retval         none
@@ -201,7 +235,7 @@ void CAN_cmd_can1(int16_t motor1, int16_t motor2, int16_t motor3)
 void CAN_cmd_can2(int16_t motor1, int16_t motor2, int16_t motor3)
 {
     uint32_t send_mail_box;
-    runner_tx_message.StdId = CAN_TX_REAR_ID;
+    runner_tx_message.StdId = CAN_TX_YAW_ID;
     runner_tx_message.IDE = CAN_ID_STD;
     runner_tx_message.RTR = CAN_RTR_DATA;
     runner_tx_message.DLC = 0x08;
@@ -239,6 +273,8 @@ const motor_measure_t *get_motor_measure_point(uint8_t bus, uint16_t id)
 			return &motor_data[1];
 		else if (id == CAN_TRANS3_ID)	
 			return &motor_data[2];
+		else if (id == CAN_YAW_ID)	
+			return &motor_data[4];
 		else
 			return NULL;
 	}

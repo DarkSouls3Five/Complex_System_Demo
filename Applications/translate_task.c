@@ -1,7 +1,7 @@
 /**
   ****************************(C) COPYRIGHT 2019 DJI****************************
   * @file       translate_task.c/h
-  * @brief      横移机构切换任务
+  * @brief      横移机构任务
   * @note       
   * @history
   *  Version    Date            Author          Modification
@@ -114,6 +114,7 @@ extern void init_ecd_record(motor_measure_t *motor_2006);//电机绝对角度初始化
 extern motor_measure_t motor_data[9];//引用电机数据
 extern garbage_mode_t garbage_mode;//引用工作模式
 extern uint8_t infrared_return;//引用红外传感器数据
+
 
 /**
   * @brief          runner_task
@@ -383,7 +384,7 @@ static void trans_control_loop(trans_act_t *trans_act_control)
 			}
 	}
 		
-		//计算完毕，打包发送三个电机电流
+		//计算完毕，打包发送所有电机电流
 		CAN_cmd_can1(trans_act_control->motor_data[0].give_current,trans_act_control->motor_data[1].give_current,trans_act_control->motor_data[1].give_current);
 }
 

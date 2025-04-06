@@ -55,6 +55,7 @@ osThreadId TranslateTaskHandle;
 osThreadId ModeSetTaskHandle;
 osThreadId buzzer_taskHandle;
 osThreadId LedFlowTaskHandle;
+osThreadId Yaw_taskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -69,6 +70,7 @@ void translate_task(void const * argument);
 void mode_set_task(void const * argument);
 void Buzzer_Task(void const * argument);
 void led_RGB_flow_task(void const * argument);
+void yaw_control_task(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -146,6 +148,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of LedFlowTask */
   osThreadDef(LedFlowTask, led_RGB_flow_task, osPriorityNormal, 0, 128);
   LedFlowTaskHandle = osThreadCreate(osThread(LedFlowTask), NULL);
+
+  /* definition and creation of Yaw_task */
+  osThreadDef(Yaw_task, yaw_control_task, osPriorityIdle, 0, 128);
+  Yaw_taskHandle = osThreadCreate(osThread(Yaw_task), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -298,6 +304,24 @@ __weak void led_RGB_flow_task(void const * argument)
     osDelay(1);
   }
   /* USER CODE END led_RGB_flow_task */
+}
+
+/* USER CODE BEGIN Header_yaw_control_task */
+/**
+* @brief Function implementing the Yaw_task thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_yaw_control_task */
+__weak void yaw_control_task(void const * argument)
+{
+  /* USER CODE BEGIN yaw_control_task */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END yaw_control_task */
 }
 
 /* Private application code --------------------------------------------------*/
