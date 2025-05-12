@@ -16,6 +16,7 @@ void infrared_task(void const * argument)
 {
 	while(1)
 	{
+		vTaskDelay(50);
 		if(HAL_GPIO_ReadPin(Infrared1_GPIO_Port, Infrared1_Pin) == GPIO_PIN_RESET)        //当检测到红外避障传感器1(PE11)为低电平持续1s，即持续检测到物体1s
 	  {
 		  

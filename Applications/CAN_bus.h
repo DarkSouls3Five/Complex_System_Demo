@@ -28,6 +28,8 @@
 #define ECD2ANGLE 2 * 3.1415926535f / ECD_RANGE
 #define REDUCTION_GIMBAL 1.0f		//云台减速比
 #define ECD2ANGLE_GIMBAL  REDUCTION_GIMBAL* 360.0f / ECD_RANGE
+#define R_WHEEL 2.5f //带轮直径，单位cm
+#define ANGLE2LENGTH R_WHEEL*3.1415926535f/360f//电机出轴角度转换到移动距离
 
 
 /* GPIO send and receive ID */

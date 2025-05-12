@@ -108,6 +108,7 @@ trans_act_t trans_act;
 float trans_distance[2];//记录电机状态切换前的绝对角度
 float trans_distance1,trans_distance2;//debug看的，没啥用
 uint8_t trans_motor_number;//将要执行动作的电机序号
+uint8_t pos_A,pos_B,pos_C,pos_D;//记录各区域所处挡位
 
 /*外部引用一系列变量*/
 extern void init_ecd_record(motor_measure_t *motor_2006);//电机绝对角度初始化
@@ -163,8 +164,9 @@ static void trans_init(trans_act_t *trans_act_init)
         return;
     }
 
-		//初始化电机编号
-		trans_motor_number=0;
+		//初始化电机编号与各区域挡位
+		trans_motor_number = 0;
+		pos_A = pos_B = pos_C = pos_D = 0;
 		
     //初始化横移机构模式
 		trans_act_init->last_trans_mode = trans_act_init->trans_mode = TRANS_FREE;
@@ -174,11 +176,12 @@ static void trans_init(trans_act_t *trans_act_init)
 		//初始化三个横移电机指针
 		trans_act_init->motor_data[0].trans_motor_measure = get_motor_measure_point(1, CAN_TRANS1_ID);
 		trans_act_init->motor_data[1].trans_motor_measure = get_motor_measure_point(1, CAN_TRANS2_ID);
+		trans_act_init->motor_data[2].trans_motor_measure = get_motor_measure_point(1, CAN_TRANS3_ID);
 
 		//记录三个横移电机初始ecd
 		init_ecd_record(&motor_data[0]);
 		init_ecd_record(&motor_data[1]);		
-
+		init_ecd_record(&motor_data[2]);	
 		
 		//速度和角度pid初始化
 		trans_PID_init(&trans_act_init->trans_angle_pid, TRANS_MOTOR_ANGLE_PID_MAX_OUT, TRANS_MOTOR_ANGLE_PID_MAX_IOUT, TRANS_MOTOR_ANGLE_PID_KP, TRANS_MOTOR_ANGLE_PID_KI, TRANS_MOTOR_ANGLE_PID_KD);
@@ -226,7 +229,10 @@ static void trans_set_mode(trans_act_t *trans_act_mode)
 			
 		//自由模式
 		else
+		{
 			trans_act_mode->trans_mode = TRANS_FREE;
+			pos_A = pos_B = pos_C = pos_D = 0;		//非工作模式下，将挡位全都初始化为0
+		}
 }
 
 /**
@@ -252,6 +258,10 @@ static void trans_feedback_update(trans_act_t *trans_act_update)
 		//横移电机2
 		trans_act_update->motor_data[1].motor_ecd = trans_act_update->motor_data[1].trans_motor_measure->ecd;//更新电机ecd
 		trans_act_update->motor_data[1].motor_speed = trans_act_update->motor_data[1].trans_motor_measure->speed_rpm;
+		//横移电机3
+		trans_act_update->motor_data[2].motor_ecd = trans_act_update->motor_data[2].trans_motor_measure->ecd;//更新电机ecd
+		trans_act_update->motor_data[2].motor_speed = trans_act_update->motor_data[2].trans_motor_measure->speed_rpm;
+
 }
 
 /**
@@ -385,7 +395,7 @@ static void trans_control_loop(trans_act_t *trans_act_control)
 	}
 		
 		//计算完毕，打包发送所有电机电流
-		CAN_cmd_can1(trans_act_control->motor_data[0].give_current,trans_act_control->motor_data[1].give_current,trans_act_control->motor_data[1].give_current);
+		CAN_cmd_can1(trans_act_control->motor_data[0].give_current,trans_act_control->motor_data[1].give_current,trans_act_control->motor_data[2].give_current);
 }
 
 

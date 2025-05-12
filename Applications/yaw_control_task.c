@@ -103,7 +103,7 @@ yaw_act_t yaw_act;
 
 extern motor_measure_t motor_data[9];//引用电机数据
 extern garbage_mode_t garbage_mode;//引用工作模式
-
+extern float distance1,distance2,distance3;//引用超声距离数据
 
 /**
   * @brief          runner_task
@@ -243,7 +243,8 @@ static void yaw_mode_change_control_transit(yaw_act_t *yaw_act_transit)
 		if(yaw_act_transit->yaw_mode == YAW_LOCK && (yaw_act_transit->last_yaw_mode == YAW_FREE))
 		//状态由自由模式切换至锁死，记录当前电机绝对角度并设为目标值
 		{
-			yaw_act_transit->motor_data.motor_angle_set = yaw_act_transit->motor_data.motor_angle;
+//			yaw_act_transit->motor_data.motor_angle_set = yaw_act_transit->motor_data.motor_angle;
+			yaw_act_transit->motor_data.motor_angle_set = YAW_ANGEL_INIT;//进入锁死状态，转到初始化正对位置
 		}
 		
 }
@@ -275,7 +276,31 @@ static void yaw_control_loop(yaw_act_t *yaw_act_control)
 		else if(yaw_act_control->yaw_mode == YAW_LOCK)
 		{
 
-				yaw_act_control->motor_data.give_current = yaw_PID_calc(&yaw_act_control->yaw_angle_pid, 
+			if(distance1 < 10.0f)
+			{
+				//延时1s
+				vTaskDelay(1000);	
+				if(distance1 < 10.0f)
+				//旋转到正对位置
+					yaw_act_control->motor_data.motor_angle_set = YAW_ANGEL_INIT;
+			}
+			else if(distance2 < 10.0f)
+			{
+				//延时1s
+				vTaskDelay(1000);	
+				if(distance2 < 10.0f)
+				//旋转到朝右位置
+					yaw_act_control->motor_data.motor_angle_set = YAW_ANGEL_RIGHT;
+			}			
+			else if(distance3 < 10.0f)
+			{
+				//延时1s
+				vTaskDelay(1000);	
+				if(distance3 < 10.0f)
+				//旋转到朝左位置
+					yaw_act_control->motor_data.motor_angle_set = YAW_ANGEL_LEFT;
+			}				
+			yaw_act_control->motor_data.give_current = yaw_PID_calc(&yaw_act_control->yaw_angle_pid, 
 																																				yaw_act_control->motor_data.motor_angle, 
 																																				yaw_act_control->motor_data.motor_angle_set,
 																																				yaw_act_control->motor_data.motor_speed);				

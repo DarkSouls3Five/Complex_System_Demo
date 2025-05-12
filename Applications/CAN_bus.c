@@ -200,7 +200,7 @@ void CAN_cmd_can1(int16_t motor1, int16_t motor2, int16_t motor3)
   * @retval         none
   */
 /**
-* @brief            发送3个横移电机、yaw电机控制电流(0x205,0x206,0x207)
+* @brief            发送yaw电机控制电流(0x205,0x206,0x207)
   * @param[in]      motor: (0x205)(0x206)(0x207) 3508电机控制电流, 范围 [-16384,16384]
   * @retval         none
   */
