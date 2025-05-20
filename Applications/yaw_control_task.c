@@ -104,6 +104,7 @@ yaw_act_t yaw_act;
 extern motor_measure_t motor_data[9];//引用电机数据
 extern garbage_mode_t garbage_mode;//引用工作模式
 extern float distance1,distance2,distance3;//引用超声距离数据
+extern uint8_t turn_set_flag;//引用旋转方向标识
 
 /**
   * @brief          runner_task
@@ -276,27 +277,18 @@ static void yaw_control_loop(yaw_act_t *yaw_act_control)
 		else if(yaw_act_control->yaw_mode == YAW_LOCK)
 		{
 
-			if(distance1 < 10.0f)
+			if(turn_set_flag==1 || turn_set_flag==0)
 			{
-				//延时1s
-				vTaskDelay(1000);	
-				if(distance1 < 10.0f)
 				//旋转到正对位置
 					yaw_act_control->motor_data.motor_angle_set = YAW_ANGEL_INIT;
 			}
-			else if(distance2 < 10.0f)
+			else if(turn_set_flag==2)
 			{
-				//延时1s
-				vTaskDelay(1000);	
-				if(distance2 < 10.0f)
 				//旋转到朝右位置
 					yaw_act_control->motor_data.motor_angle_set = YAW_ANGEL_RIGHT;
 			}			
-			else if(distance3 < 10.0f)
+			else if(turn_set_flag==3)
 			{
-				//延时1s
-				vTaskDelay(1000);	
-				if(distance3 < 10.0f)
 				//旋转到朝左位置
 					yaw_act_control->motor_data.motor_angle_set = YAW_ANGEL_LEFT;
 			}				

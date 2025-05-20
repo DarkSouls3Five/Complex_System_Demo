@@ -5,6 +5,7 @@
 extern Ultrasonic_Data_t Ultrasonic_Data[3];
 float distance1,distance2,distance3;
 uint8_t mode_set_flag;
+uint8_t turn_set_flag;
 
 void ultrasonic_task(void const * argument)
 {
@@ -26,7 +27,9 @@ void ultrasonic_task(void const * argument)
 			if( distance1 < 8.00f && distance2 < 8.00f )
 				mode_set_flag = 1;
 			else
-				mode_set_flag = 0;				
+				mode_set_flag = 0;		
+			
+		
 		
 	}
 }

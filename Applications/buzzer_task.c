@@ -15,6 +15,9 @@ const uint32_t btnDelay1=200;
 const uint32_t btnDelay2=400;
 const uint32_t btnDelay3=600;
 const uint32_t btnDelay4=800;
+//外部引用红外标识
+extern uint8_t infrared_return;
+extern uint8_t last_infrared_return;
 
 void tim0(uint16_t tune)
 {
@@ -56,6 +59,8 @@ void tim4(uint16_t tune)
 void Buzzer_work_mode(void);
 //进入自由模式提示音
 void Buzzer_free_mode(void);
+//报警提示音
+void Buzzer_warning_mode(void);
 
 void Buzzer_test(void);
 
@@ -86,6 +91,11 @@ void Buzzer_Task(void const * argument)
 			BuzzerCount = 0;
 		}
 
+		if(infrared_return!=0 && last_infrared_return==0)
+		{
+			Buzzer_warning_mode();	
+			fn_BuzzerClose();
+		}
 		vTaskDelay(100);
 	}
 }
@@ -139,7 +149,11 @@ void Buzzer_free_mode(void)
 
 }
 
+void Buzzer_warning_mode(void)
+{
+	tim2(H3);   
 
+}
 //关闭蜂鸣器
 void fn_BuzzerClose(void){
 	__HAL_TIM_SET_COMPARE(&htim4,TIM_CHANNEL_3,0);

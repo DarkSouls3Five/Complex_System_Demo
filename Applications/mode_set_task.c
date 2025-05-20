@@ -23,6 +23,8 @@
 
 static void mode_init(garbage_mode_t *garbage_mode_init);
 extern uint8_t mode_set_flag;
+extern uint8_t turn_set_flag;
+extern float distance1,distance2,distance3;
 
 /**
   * @brief          set gimbal control mode, mainly call 'gimbal_behaviour_mode_set' function
@@ -120,7 +122,7 @@ static void mode_set(garbage_mode_t *garbage_mode_set)
 		/*三个超声传感器均被遮挡，持续2s，进入工作模式*/		
 		if(mode_set_flag==1)
 		{
-			vTaskDelay(2000);		
+			vTaskDelay(1000);		
 			if(mode_set_flag==1)
 					garbage_mode_set->garbage_mode = MODE_WORK;
 		}
@@ -132,7 +134,46 @@ static void mode_set(garbage_mode_t *garbage_mode_set)
 			if(HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin) == GPIO_PIN_RESET)
 				garbage_mode_set->garbage_mode = MODE_FREE;
 		}
-
+		
+		//工作模式下设置旋转方位
+		if(garbage_mode_set->garbage_mode == MODE_WORK)
+		{
+		if(distance1<10.0f)
+		{
+			vTaskDelay(1000);			
+			if(distance1<10.0f)
+			{
+				turn_set_flag=1;
+				vTaskDelay(8000);
+				turn_set_flag=0;
+			}
+		}		
+		else if(distance2<10.0f)
+		{
+			vTaskDelay(1000);			
+			if(distance2<10.0f)
+			{
+				turn_set_flag=2;
+				//5秒后复原
+				vTaskDelay(8000);
+				turn_set_flag=0;				
+			}
+		}
+		else if(distance3<10.0f)
+		{
+			vTaskDelay(1000);			
+			if(distance3<10.0f)
+			{
+				turn_set_flag=3;
+				//5秒后复原
+				vTaskDelay(8000);				
+				turn_set_flag=0;
+			}				
+		}
+		else 
+			{turn_set_flag=0;}
+		}
+		
 }
 
 

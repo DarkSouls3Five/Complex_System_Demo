@@ -57,6 +57,17 @@ static void trans_init(trans_act_t *trans_act_init);
   */
 static void trans_set_mode(trans_act_t *trans_act_mode);
 /**
+  * @brief          set gimbal control mode, mainly call 'gimbal_behaviour_mode_set' function
+  * @param[out]     gimbal_set_mode: "gimbal_control" valiable point
+  * @retval         none
+  */
+/**
+  * @brief          ???????????g????????'gimbal_behaviour_mode_set'??????i?
+  * @param[out]     gimbal_set_mode:"gimbal_control"???????.
+  * @retval         none
+  */
+static void trans_set_param(trans_act_t *trans_act_param);
+/**
   * @brief          runner some measure data updata, such as motor enconde, euler angle, gyro
   * @param[out]     runner_feedback_update: "runner_act" valiable point
   * @retval         none
@@ -105,10 +116,16 @@ static void trans_PID_init(trans_PID_t *pid, fp32 maxout, fp32 max_iout, fp32 kp
 static fp32 trans_PID_calc(trans_PID_t *pid, fp32 get, fp32 set, fp32 error_delta);
 
 trans_act_t trans_act;
-float trans_distance[2];//记录电机状态切换前的绝对角度
-float trans_distance1,trans_distance2;//debug看的，没啥用
-uint8_t trans_motor_number;//将要执行动作的电机序号
+float trans_distance[3];//记录电机状态切换前的绝对角度
+float trans_distance1,trans_distance2,trans_distance3;//debug看的，没啥用
 uint8_t pos_A,pos_B,pos_C,pos_D;//记录各区域所处挡位
+
+//逻辑判断所设置的一系列参数
+float trans_move_angle;//设置电机转动距离
+uint8_t trans_motor_number;//设置将要执行动作的电机序号
+uint8_t TRANS_DIR = DIR_L;//设置电机转动方向
+uint8_t	last_infrared_return;//前一次红外变化值
+
 
 /*外部引用一系列变量*/
 extern void init_ecd_record(motor_measure_t *motor_2006);//电机绝对角度初始化
@@ -135,6 +152,7 @@ void translate_task(void const * argument)
     trans_init(&trans_act);
     while(1)
     {
+			trans_set_param(&trans_act);
 			trans_set_mode(&trans_act);                    //???????????g?
 			trans_feedback_update(&trans_act);            //??????????
 			trans_mode_change_control_transit(&trans_act);
@@ -190,7 +208,50 @@ static void trans_init(trans_act_t *trans_act_init)
     trans_feedback_update(trans_act_init);
 		
 }
-
+/**
+  * @brief          set gimbal control mode, mainly call 'gimbal_behaviour_mode_set' function
+  * @param[out]     gimbal_set_mode: "gimbal_control" valiable point
+  * @retval         none
+  */
+/**
+  * @brief          ???????????g????????'gimbal_behaviour_mode_set'??????i?
+  * @param[out]     gimbal_set_mode:"gimbal_control"???????.
+  * @retval         none
+  */
+//进行逻辑判断，通过红外信号判断哪个区域装满，并据此设置各电机的移动行为
+static void trans_set_param(trans_act_t *trans_act_param)
+{
+	
+	//待补充完善，主函数里在set_mode前调用
+	if(infrared_return == 2)
+	//说明A区满
+	{
+		if(pos_A == 0 || pos_A == 1)
+		//A区处于0或1挡位时检测到满
+		{
+			//电机2左移一半距离	
+			TRANS_DIR = DIR_L;
+			trans_motor_number = 1;
+			trans_move_angle = TRANS_MOVE_ANGLE_HALF;				
+		}
+		else if(pos_A == 2 || pos_A == 3 || pos_A == 4)
+		//A区处于2或3挡位时检测到满
+		{
+			//电机3右移一半距离	
+			TRANS_DIR = DIR_R;
+			trans_motor_number = 2;
+			trans_move_angle = TRANS_MOVE_ANGLE_HALF;	
+		}
+	}
+	
+	if(last_infrared_return==2 && infrared_return==0)
+		//当上一次红外值为2，且当前红外值为0，说明完成一次移动
+		{
+			pos_A++;
+		}
+	//更新上一次的红外值
+	last_infrared_return=infrared_return;
+}
 /**
   * @brief          set gimbal control mode, mainly call 'gimbal_behaviour_mode_set' function
   * @param[out]     gimbal_set_mode: "gimbal_control" valiable point
@@ -210,18 +271,14 @@ static void trans_set_mode(trans_act_t *trans_act_mode)
 		//工作模式
 		if(garbage_mode.garbage_mode == MODE_WORK)
 		{
-			if(infrared_return == 1)
-			//区域1装满
+			if(infrared_return != 0)
+			//有区域装满
 			{
-				trans_act_mode->trans_mode = TRANS_MOVE_L;
-				trans_motor_number = 0;//电机1执行动作
-			}
+				if(TRANS_DIR == DIR_L)
+					trans_act_mode->trans_mode = TRANS_MOVE_L;
+				else if(TRANS_DIR == DIR_R)
+					trans_act_mode->trans_mode = TRANS_MOVE_R;					
 			
-			else if(infrared_return == 2)
-			//区域2装满
-			{
-				trans_act_mode->trans_mode = TRANS_MOVE_L;				
-				trans_motor_number = 1;//电机2执行动作
 			}
 			else
 				trans_act_mode->trans_mode = TRANS_LOCK;			
@@ -234,6 +291,7 @@ static void trans_set_mode(trans_act_t *trans_act_mode)
 			pos_A = pos_B = pos_C = pos_D = 0;		//非工作模式下，将挡位全都初始化为0
 		}
 }
+
 
 /**
   * @brief          runner some measure data updata, such as motor enconde, euler angle, gyro
@@ -284,32 +342,33 @@ static void trans_mode_change_control_transit(trans_act_t *trans_act_transit)
 		if(trans_act_transit->trans_mode == TRANS_LOCK && (trans_act_transit->last_trans_mode == TRANS_FREE))
 		//状态由自由模式切换至锁死，记录当前电机绝对角度并设为目标值
 		{
-			for (uint8_t i = 0; i < 2; i++)
+			for (uint8_t i = 0; i < 3; i++)
 			{
 				trans_distance[i] = trans_act_transit->motor_data[i].trans_motor_measure->distance;
 			}
 		}
-		if((trans_act_transit->trans_mode == TRANS_MOVE_L || trans_act_transit->trans_mode == TRANS_MOVE_R) 
+		if((trans_act_transit->trans_mode == TRANS_MOVE_R || trans_act_transit->trans_mode == TRANS_MOVE_L) 
 			  && trans_act_transit->last_trans_mode == TRANS_LOCK)
 		//状态由锁死切换至移动模式，将当前绝对角度赋值给trans_distance
 		{
-			for (uint8_t i = 0; i < 2; i++)
+			for (uint8_t i = 0; i < 3; i++)
 			{
 				trans_distance[i] = trans_act_transit->motor_data[i].trans_motor_measure->distance;
 			}
 		}
 		
 		if(trans_act_transit->trans_mode == TRANS_LOCK && 
-			(trans_act_transit->last_trans_mode == TRANS_MOVE_L ||trans_act_transit->last_trans_mode == TRANS_MOVE_R))
+			(trans_act_transit->last_trans_mode == TRANS_MOVE_R ||trans_act_transit->last_trans_mode == TRANS_MOVE_L))
 		//状态由移动模式切换至锁死，记录当前电机绝对角度并设为目标值
 		{
-			for (uint8_t i = 0; i < 2; i++)
+			for (uint8_t i = 0; i < 3; i++)
 			{
 				trans_distance[i] = trans_act_transit->motor_data[i].trans_motor_measure->distance;
 			}
 		}
 		trans_distance1=trans_distance[0];
 		trans_distance2=trans_distance[1];
+		trans_distance3=trans_distance[2];
 }
 	
 /**
@@ -337,17 +396,17 @@ static void trans_control_loop(trans_act_t *trans_act_control)
 			}				
 	}
 				
-		/*向左移动状态*/
-		else if(trans_act_control->trans_mode == TRANS_MOVE_L)
+		/*向右移动状态*/
+		else if(trans_act_control->trans_mode == TRANS_MOVE_R)
 		{
 			motor_speed = TRANS_SET_SPEED;
 			
-			if(fabs(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_distance[trans_motor_number]) - TRANS_MOVE_ANGLE) < TRANS_ERR)
+			if(fabs(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_distance[trans_motor_number]) - trans_move_angle) < TRANS_ERR)
 			//移动即将到位时改用位置环
 			{
 				trans_act_control->motor_data[trans_motor_number].give_current = trans_PID_calc(&trans_act_control->trans_angle_pid, 
 																											                trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance, 
-																											                trans_distance[trans_motor_number] + TRANS_MOVE_ANGLE, 
+																											                trans_distance[trans_motor_number] + trans_move_angle, 
 																											                trans_act_control->motor_data[trans_motor_number].motor_speed);	
 			}
 			else
@@ -360,17 +419,17 @@ static void trans_control_loop(trans_act_t *trans_act_control)
 		}	
 
 
-		/*向右移动状态*/
-		else if(trans_act_control->trans_mode == TRANS_MOVE_R)
+		/*向左移动状态*/
+		else if(trans_act_control->trans_mode == TRANS_MOVE_L)
 		{
 			motor_speed = -TRANS_SET_SPEED;
 			
-			if(fabs(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_distance[trans_motor_number]) + TRANS_MOVE_ANGLE) < TRANS_ERR)
+			if(fabs(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_distance[trans_motor_number]) - trans_move_angle) < TRANS_ERR)
 			//移动即将到位时改用位置环
 			{
 				trans_act_control->motor_data[trans_motor_number].give_current = trans_PID_calc(&trans_act_control->trans_angle_pid, 
 																											                trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance, 
-																											                trans_distance[trans_motor_number] + TRANS_MOVE_ANGLE, 
+																											                trans_distance[trans_motor_number] + trans_move_angle, 
 																											                trans_act_control->motor_data[trans_motor_number].motor_speed);	
 			}
 			else

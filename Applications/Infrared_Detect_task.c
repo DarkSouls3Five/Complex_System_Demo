@@ -16,25 +16,26 @@ void infrared_task(void const * argument)
 {
 	while(1)
 	{
+		//判断优先级A→B→C→D，2-4-3-1
 		vTaskDelay(50);
-		if(HAL_GPIO_ReadPin(Infrared1_GPIO_Port, Infrared1_Pin) == GPIO_PIN_RESET)        //当检测到红外避障传感器1(PE11)为低电平持续1s，即持续检测到物体1s
-	  {
-		  
-			vTaskDelay(1000);              
-			if(HAL_GPIO_ReadPin(Infrared1_GPIO_Port, Infrared1_Pin) == GPIO_PIN_RESET)
-			{
-				infrared_return=1;		
-				vTaskDelay(5000);
-				infrared_return=0;					
-			}
-	  }
-		else if(HAL_GPIO_ReadPin(Infrared2_GPIO_Port, Infrared2_Pin) == GPIO_PIN_RESET)        //红外避障传感器2(PE13)
+		if(HAL_GPIO_ReadPin(Infrared2_GPIO_Port, Infrared2_Pin) == GPIO_PIN_RESET)        //当检测到红外避障传感器1(PE11)为低电平持续1s，即持续检测到物体1s
 	  {
 		  
 			vTaskDelay(1000);              
 			if(HAL_GPIO_ReadPin(Infrared2_GPIO_Port, Infrared2_Pin) == GPIO_PIN_RESET)
 			{
 				infrared_return=2;		
+				vTaskDelay(5000);
+				infrared_return=0;					
+			}
+	  }
+		else if(HAL_GPIO_ReadPin(Infrared4_GPIO_Port, Infrared4_Pin) == GPIO_PIN_RESET)        //红外避障传感器2(PE13)
+	  {
+		  
+			vTaskDelay(1000);              
+			if(HAL_GPIO_ReadPin(Infrared4_GPIO_Port, Infrared4_Pin) == GPIO_PIN_RESET)
+			{
+				infrared_return=4;		
 				vTaskDelay(5000);
 				infrared_return=0;					
 			}
@@ -50,13 +51,13 @@ void infrared_task(void const * argument)
 				infrared_return=0;					
 			}
 	  }
-		else if(HAL_GPIO_ReadPin(Infrared4_GPIO_Port, Infrared4_Pin) == GPIO_PIN_RESET)        //红外避障传感器4(PB12)为低电平
+		else if(HAL_GPIO_ReadPin(Infrared1_GPIO_Port, Infrared1_Pin) == GPIO_PIN_RESET)        //红外避障传感器4(PB12)为低电平
 	  {
 		  
 			vTaskDelay(1000);              
-			if(HAL_GPIO_ReadPin(Infrared4_GPIO_Port, Infrared4_Pin) == GPIO_PIN_RESET)
+			if(HAL_GPIO_ReadPin(Infrared1_GPIO_Port, Infrared1_Pin) == GPIO_PIN_RESET)
 			{
-				infrared_return=4;		
+				infrared_return=1;		
 				vTaskDelay(5000);
 				infrared_return=0;					
 			}
