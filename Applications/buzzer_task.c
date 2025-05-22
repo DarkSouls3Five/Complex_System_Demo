@@ -18,6 +18,8 @@ const uint32_t btnDelay4=800;
 //外部引用红外标识
 extern uint8_t infrared_return;
 extern uint8_t last_infrared_return;
+//外部引用满载报警标识
+extern uint8_t warning_flag;
 
 void tim0(uint16_t tune)
 {
@@ -91,7 +93,7 @@ void Buzzer_Task(void const * argument)
 			BuzzerCount = 0;
 		}
 
-		if(infrared_return!=0 && last_infrared_return==0)
+		if(warning_flag == 1)
 		{
 			Buzzer_warning_mode();	
 			fn_BuzzerClose();
@@ -107,21 +109,21 @@ void Buzzer_work_mode(void)
 	tim0(0);
 	tim1(M3);   
 	tim0(0);
-	tim1(M3);   
-	tim0(0);
-	tim1(M3);   //450
-	tim0(0);
-	
-	tim1(0);
-	tim2(M1);   //300
-	tim0(0);
-	tim2(M2);   //450
-	tim0(0);
-	tim2(M3);   //450
-	tim0(0);
-	tim1(M2);   //450
-	tim0(0);
-	tim2(M3);
+//	tim1(M3);   
+//	tim0(0);
+//	tim1(M3);   //450
+//	tim0(0);
+//	
+//	tim1(0);
+//	tim2(M1);   //300
+//	tim0(0);
+//	tim2(M2);   //450
+//	tim0(0);
+//	tim2(M3);   //450
+//	tim0(0);
+//	tim1(M2);   //450
+//	tim0(0);
+//	tim2(M3);
 }
 
 /*Gwyn, Lord of Cinder*/

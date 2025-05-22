@@ -122,9 +122,11 @@ uint8_t pos_A,pos_B,pos_C,pos_D;//记录各区域所处挡位
 
 //逻辑判断所设置的一系列参数
 float trans_move_angle;//设置电机转动距离
+float trans_target_distance = 0.0f;//设置电机移动的目标角度
 uint8_t trans_motor_number;//设置将要执行动作的电机序号
 uint8_t TRANS_DIR = DIR_L;//设置电机转动方向
-uint8_t	last_infrared_return;//前一次红外变化值
+uint8_t	last_infrared_return = 0;//前一次红外变化值
+uint8_t	warning_flag = 0;//报警提示标识
 
 
 /*外部引用一系列变量*/
@@ -223,32 +225,85 @@ static void trans_set_param(trans_act_t *trans_act_param)
 {
 	
 	//待补充完善，主函数里在set_mode前调用
-	if(infrared_return == 2)
-	//说明A区满
+	if(last_infrared_return == 0 && infrared_return == 2)
+	//A区满
 	{
-		if(pos_A == 0 || pos_A == 1)
-		//A区处于0或1挡位时检测到满
+		//通过电机2和3位置进行判断，先判断2		
+		if(trans_act_param->motor_data[1].trans_motor_measure->distance > 250.0f + TRANS_DISTANCE_ERR)
+		//>250，左移+err消除移动误差
 		{
-			//电机2左移一半距离	
+			//电机2左移至250
 			TRANS_DIR = DIR_L;
 			trans_motor_number = 1;
-			trans_move_angle = TRANS_MOVE_ANGLE_HALF;				
+			trans_target_distance = 250.0f;			
 		}
-		else if(pos_A == 2 || pos_A == 3 || pos_A == 4)
-		//A区处于2或3挡位时检测到满
+		else if(trans_act_param->motor_data[1].trans_motor_measure->distance > 0.0f + TRANS_DISTANCE_ERR )
+		//[0+err,250+err]
 		{
-			//电机3右移一半距离	
-			TRANS_DIR = DIR_R;
-			trans_motor_number = 2;
-			trans_move_angle = TRANS_MOVE_ANGLE_HALF;	
+			//电机2左移至0
+			TRANS_DIR = DIR_L;
+			trans_motor_number = 1;
+			trans_target_distance = 0.0f;			
+		}
+		else if(trans_act_param->motor_data[1].trans_motor_measure->distance > -250.0f + TRANS_DISTANCE_ERR)
+		//[-250+err,0+err]
+		{
+			//电机2左移至-250
+			TRANS_DIR = DIR_L;
+			trans_motor_number = 1;
+			trans_target_distance = -250.0f;				
+		}
+		else if(trans_act_param->motor_data[1].trans_motor_measure->distance > -500.0f + TRANS_DISTANCE_ERR)
+		//[-500+err,-250+err]		
+		{
+			//电机2左移至-500
+			TRANS_DIR = DIR_L;
+			trans_motor_number = 1;
+			trans_target_distance = -500.0f;
+		}
+		else if(trans_act_param->motor_data[1].trans_motor_measure->distance <= -500.0f + TRANS_DISTANCE_ERR )	
+		//<-500+err,将由电机3动作
+		{
+			if(trans_act_param->motor_data[2].trans_motor_measure->distance < -250.0f - TRANS_DISTANCE_ERR)
+			//<-250，右移-err消除移动误差
+			{
+				//电机3右移至-250
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 2;
+				trans_target_distance = -250.0f;			
+			}
+			else if(trans_act_param->motor_data[2].trans_motor_measure->distance < 0.0f - TRANS_DISTANCE_ERR )
+			//[-250-err,0-err]
+			{
+				//电机3右移至0
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 2;
+				trans_target_distance = 0.0f;			
+			}
+			else if(trans_act_param->motor_data[2].trans_motor_measure->distance < 250.0f - TRANS_DISTANCE_ERR)
+			//[-250+err,0+err]
+			{
+				//电机3右移至250
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 2;
+				trans_target_distance = 250.0f;				
+			}
+			else if(trans_act_param->motor_data[2].trans_motor_measure->distance < 500.0f - TRANS_DISTANCE_ERR)
+			//[-500+err,-250+err]	
+			{
+				//电机3右移至500
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 2;
+				trans_target_distance = 500.0f;
+			}		
+			else if(trans_act_param->motor_data[2].trans_motor_measure->distance > 500.0f - TRANS_DISTANCE_ERR )	
+			{
+				warning_flag = 1;
+			}
 		}
 	}
 	
-	if(last_infrared_return==2 && infrared_return==0)
-		//当上一次红外值为2，且当前红外值为0，说明完成一次移动
-		{
-			pos_A++;
-		}
+
 	//更新上一次的红外值
 	last_infrared_return=infrared_return;
 }
@@ -272,7 +327,7 @@ static void trans_set_mode(trans_act_t *trans_act_mode)
 		if(garbage_mode.garbage_mode == MODE_WORK)
 		{
 			if(infrared_return != 0)
-			//有区域装满
+			//有区域装满，根据设置的参数判断进左移还是右移模式
 			{
 				if(TRANS_DIR == DIR_L)
 					trans_act_mode->trans_mode = TRANS_MOVE_L;
@@ -281,7 +336,10 @@ static void trans_set_mode(trans_act_t *trans_act_mode)
 			
 			}
 			else
+			{
+				warning_flag =0;//将满载报警标识清零
 				trans_act_mode->trans_mode = TRANS_LOCK;			
+			}
 		}
 			
 		//自由模式
@@ -401,12 +459,12 @@ static void trans_control_loop(trans_act_t *trans_act_control)
 		{
 			motor_speed = TRANS_SET_SPEED;
 			
-			if(fabs(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_distance[trans_motor_number]) - trans_move_angle) < TRANS_ERR)
+			if(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_target_distance) < TRANS_ERR)			
 			//移动即将到位时改用位置环
 			{
 				trans_act_control->motor_data[trans_motor_number].give_current = trans_PID_calc(&trans_act_control->trans_angle_pid, 
 																											                trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance, 
-																											                trans_distance[trans_motor_number] + trans_move_angle, 
+																											                trans_target_distance, 
 																											                trans_act_control->motor_data[trans_motor_number].motor_speed);	
 			}
 			else
@@ -424,12 +482,12 @@ static void trans_control_loop(trans_act_t *trans_act_control)
 		{
 			motor_speed = -TRANS_SET_SPEED;
 			
-			if(fabs(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_distance[trans_motor_number]) - trans_move_angle) < TRANS_ERR)
+			if(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_target_distance) < TRANS_ERR)	
 			//移动即将到位时改用位置环
 			{
 				trans_act_control->motor_data[trans_motor_number].give_current = trans_PID_calc(&trans_act_control->trans_angle_pid, 
 																											                trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance, 
-																											                trans_distance[trans_motor_number] + trans_move_angle, 
+																											                trans_target_distance, 
 																											                trans_act_control->motor_data[trans_motor_number].motor_speed);	
 			}
 			else

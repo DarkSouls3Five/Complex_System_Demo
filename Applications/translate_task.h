@@ -10,6 +10,7 @@
 #define PI					3.14159265358979f
 #define TRANS_MOVE_ANGLE 500.0f//移动二分之一边长
 #define TRANS_MOVE_ANGLE_HALF 250.0f//移动四分之一边长
+#define TRANS_DISTANCE_ERR 20.0f//位移偏差
 #define TRANS_ERR 10.0f
 #define DIR_L 1
 #define DIR_R 0
