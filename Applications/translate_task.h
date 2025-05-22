@@ -19,7 +19,7 @@
 #define TRANS_MOTOR_SPEED_PID_KI 0.0f
 #define TRANS_MOTOR_SPEED_PID_KD -0.01f
 
-#define TRANS_MOTOR_SPEED_PID_MAX_OUT 500.f
+#define TRANS_MOTOR_SPEED_PID_MAX_OUT 800.f
 #define TRANS_MOTOR_SPEED_PID_MAX_IOUT 200.0f
 
 #define TRANS_MOTOR_ANGLE_PID_KP 0.60f
@@ -35,9 +35,9 @@ typedef enum
 {
   TRANS_FREE,
 	TRANS_LOCK,
-	TRANS_MOVE_L,
-	TRANS_MOVE_R,
-	
+	TRANS_MOVE_L,//单电机左移
+	TRANS_MOVE_R,//单电机右移
+
 } trans_mode_e;
 
 typedef struct

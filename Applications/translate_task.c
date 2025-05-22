@@ -112,6 +112,8 @@ static void trans_control_loop(trans_act_t *trans_act_control);
   * @param[out]     gimbal_init:"gimbal_control"???????.
   * @retval         none
   */
+//电机移动一步的函数封装，参数：结构体指针，电机移动距离，电机序号，电机速度
+static void motor_trans_one_step(trans_act_t *trans_act_step, float target, uint8_t number,fp32 speed);
 static void trans_PID_init(trans_PID_t *pid, fp32 maxout, fp32 max_iout, fp32 kp, fp32 ki, fp32 kd);
 static fp32 trans_PID_calc(trans_PID_t *pid, fp32 get, fp32 set, fp32 error_delta);
 
@@ -123,8 +125,12 @@ uint8_t pos_A,pos_B,pos_C,pos_D;//记录各区域所处挡位
 //逻辑判断所设置的一系列参数
 float trans_move_angle;//设置电机转动距离
 float trans_target_distance = 0.0f;//设置电机移动的目标角度
-uint8_t trans_motor_number;//设置将要执行动作的电机序号
+
+uint8_t trans_motor_number;//设置将要执行动作的单电机序号
+
+
 uint8_t TRANS_DIR = DIR_L;//设置电机转动方向
+
 uint8_t	last_infrared_return = 0;//前一次红外变化值
 uint8_t	warning_flag = 0;//报警提示标识
 
@@ -225,8 +231,10 @@ static void trans_set_param(trans_act_t *trans_act_param)
 {
 	
 	//待补充完善，主函数里在set_mode前调用
+
+
+/**************A区装满，根据电机2和3所处distance判断并控制移动***************/	
 	if(last_infrared_return == 0 && infrared_return == 2)
-	//A区满
 	{
 		//通过电机2和3位置进行判断，先判断2		
 		if(trans_act_param->motor_data[1].trans_motor_measure->distance > 250.0f + TRANS_DISTANCE_ERR)
@@ -303,8 +311,170 @@ static void trans_set_param(trans_act_t *trans_act_param)
 		}
 	}
 	
-
-	//更新上一次的红外值
+	
+/**************B区装满，根据电机1所处distance判断并控制移动***************/		
+	else if(last_infrared_return == 0 && infrared_return == 4)
+	/*B区装满，根据电机1所处distance判断并控制移动*/
+	{
+		//通过电机1位置进行判断		
+			if(trans_act_param->motor_data[0].trans_motor_measure->distance < -250.0f - TRANS_DISTANCE_ERR)
+			//<-250，右移-err消除移动误差
+			{
+				//电机1右移至-250
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 0;
+				trans_target_distance = -250.0f;			
+			}
+			else if(trans_act_param->motor_data[0].trans_motor_measure->distance < 0.0f - TRANS_DISTANCE_ERR )
+			//[-250-err,0-err]
+			{
+				//电机1右移至0
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 0;
+				trans_target_distance = 0.0f;			
+			}
+			else if(trans_act_param->motor_data[0].trans_motor_measure->distance < 250.0f - TRANS_DISTANCE_ERR)
+			//[-250+err,0+err]
+			{
+				//电机1右移至250
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 0;
+				trans_target_distance = 250.0f;				
+			}
+			else if(trans_act_param->motor_data[0].trans_motor_measure->distance < 500.0f - TRANS_DISTANCE_ERR)
+			//[-500+err,-250+err]	
+			{
+				//电机1右移至500
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 0;
+				trans_target_distance = 500.0f;
+			}		
+			else if(trans_act_param->motor_data[0].trans_motor_measure->distance > 500.0f - TRANS_DISTANCE_ERR )	
+			{
+				warning_flag = 1;
+			}
+		}
+/**************C区装满，根据电机3所处distance判断并控制移动***************/		
+	else if(last_infrared_return == 0 && infrared_return == 3)
+	/*C区装满，根据电机3所处distance判断并控制电机2和3移动*/
+	{
+		//通过电机3位置进行判断，并控制电机3移动		
+			if(trans_act_param->motor_data[2].trans_motor_measure->distance > 250.0f + TRANS_DISTANCE_ERR)
+			//>-250，左移+err消除移动误差
+			{
+				//电机3左移至-250
+				TRANS_DIR = DIR_L;
+				trans_motor_number = 2;
+				trans_target_distance = 250.0f;			
+			}
+			else if(trans_act_param->motor_data[2].trans_motor_measure->distance > 0.0f + TRANS_DISTANCE_ERR )
+			//[-250-err,0-err]
+			{
+				//电机3左移至0
+				TRANS_DIR = DIR_L;
+				trans_motor_number = 2;
+				trans_target_distance = 0.0f;			
+			}
+			else if(trans_act_param->motor_data[2].trans_motor_measure->distance > -250.0f + TRANS_DISTANCE_ERR)
+			//[-250+err,0+err]
+			{
+				//电机3左移至-250
+				TRANS_DIR = DIR_L;
+				trans_motor_number = 2;
+				trans_target_distance = -250.0f;				
+			}
+			else if(trans_act_param->motor_data[2].trans_motor_measure->distance > -500.0f + TRANS_DISTANCE_ERR)
+			//[-500+err,-250+err]	
+			{
+				//电机3左移至500
+				TRANS_DIR = DIR_L;
+				trans_motor_number = 2;
+				trans_target_distance = -500.0f;
+			}		
+			else if(trans_act_param->motor_data[2].trans_motor_measure->distance < -500.0f + TRANS_DISTANCE_ERR )	
+			{
+				warning_flag = 1;
+			}
+		}
+/**************D区装满，根据电机1和2所处distance判断并控制移动***************/	
+	if(last_infrared_return == 0 && infrared_return == 1)
+	{
+		//通过电机1和2位置进行判断，先判断1		
+		if(trans_act_param->motor_data[0].trans_motor_measure->distance > 250.0f + TRANS_DISTANCE_ERR)
+		//>250，左移+err消除移动误差
+		{
+			//电机1左移至250
+			TRANS_DIR = DIR_L;
+			trans_motor_number = 0;
+			trans_target_distance = 250.0f;			
+		}
+		else if(trans_act_param->motor_data[0].trans_motor_measure->distance > 0.0f + TRANS_DISTANCE_ERR )
+		//[0+err,250+err]
+		{
+			//电机1左移至0
+			TRANS_DIR = DIR_L;
+			trans_motor_number = 0;
+			trans_target_distance = 0.0f;			
+		}
+		else if(trans_act_param->motor_data[0].trans_motor_measure->distance > -250.0f + TRANS_DISTANCE_ERR)
+		//[-250+err,0+err]
+		{
+			//电机1左移至-250
+			TRANS_DIR = DIR_L;
+			trans_motor_number = 0;
+			trans_target_distance = -250.0f;				
+		}
+		else if(trans_act_param->motor_data[0].trans_motor_measure->distance > -500.0f + TRANS_DISTANCE_ERR)
+		//[-500+err,-250+err]		
+		{
+			//电机1左移至-500
+			TRANS_DIR = DIR_L;
+			trans_motor_number = 0;
+			trans_target_distance = -500.0f;
+		}
+		else if(trans_act_param->motor_data[0].trans_motor_measure->distance <= -500.0f + TRANS_DISTANCE_ERR )	
+		//<-500+err,将由电机2动作
+		{
+			if(trans_act_param->motor_data[1].trans_motor_measure->distance < -250.0f - TRANS_DISTANCE_ERR)
+			//<-250，右移-err消除移动误差
+			{
+				//电机3右移至-250
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 1;
+				trans_target_distance = -250.0f;			
+			}
+			else if(trans_act_param->motor_data[1].trans_motor_measure->distance < 0.0f - TRANS_DISTANCE_ERR )
+			//[-250-err,0-err]
+			{
+				//电机3右移至0
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 1;
+				trans_target_distance = 0.0f;			
+			}
+			else if(trans_act_param->motor_data[1].trans_motor_measure->distance < 250.0f - TRANS_DISTANCE_ERR)
+			//[-250+err,0+err]
+			{
+				//电机3右移至250
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 1;
+				trans_target_distance = 250.0f;				
+			}
+			else if(trans_act_param->motor_data[1].trans_motor_measure->distance < 500.0f - TRANS_DISTANCE_ERR)
+			//[-500+err,-250+err]	
+			{
+				//电机3右移至500
+				TRANS_DIR = DIR_R;
+				trans_motor_number = 1;
+				trans_target_distance = 500.0f;
+			}		
+			else if(trans_act_param->motor_data[1].trans_motor_measure->distance > 500.0f - TRANS_DISTANCE_ERR )	
+			{
+				warning_flag = 1;
+			}
+		}
+	}
+	
+	//每次循环更新上一次的红外值
 	last_infrared_return=infrared_return;
 }
 /**
@@ -454,51 +624,23 @@ static void trans_control_loop(trans_act_t *trans_act_control)
 			}				
 	}
 				
-		/*向右移动状态*/
+		/*单电机向右移动状态*/
 		else if(trans_act_control->trans_mode == TRANS_MOVE_R)
 		{
 			motor_speed = TRANS_SET_SPEED;
+			motor_trans_one_step(trans_act_control,trans_target_distance,trans_motor_number,motor_speed);			
 			
-			if(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_target_distance) < TRANS_ERR)			
-			//移动即将到位时改用位置环
-			{
-				trans_act_control->motor_data[trans_motor_number].give_current = trans_PID_calc(&trans_act_control->trans_angle_pid, 
-																											                trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance, 
-																											                trans_target_distance, 
-																											                trans_act_control->motor_data[trans_motor_number].motor_speed);	
-			}
-			else
-			//移动中使用单速度环			
-			{
-				trans_act_control->motor_data[trans_motor_number].motor_speed_set = motor_speed;
-				trans_act_control->motor_data[trans_motor_number].give_current = (int16_t)PID_calc(&trans_act_control->trans_speed_pid, 
-																													trans_act_control->motor_data[trans_motor_number].motor_speed, trans_act_control->motor_data[trans_motor_number].motor_speed_set);			
-			}
 		}	
 
 
-		/*向左移动状态*/
+		/*单电机向左移动状态*/
 		else if(trans_act_control->trans_mode == TRANS_MOVE_L)
 		{
 			motor_speed = -TRANS_SET_SPEED;
-			
-			if(fabs(trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance - trans_target_distance) < TRANS_ERR)	
-			//移动即将到位时改用位置环
-			{
-				trans_act_control->motor_data[trans_motor_number].give_current = trans_PID_calc(&trans_act_control->trans_angle_pid, 
-																											                trans_act_control->motor_data[trans_motor_number].trans_motor_measure->distance, 
-																											                trans_target_distance, 
-																											                trans_act_control->motor_data[trans_motor_number].motor_speed);	
-			}
-			else
-			{
-			//移动中使用单速度环
-				trans_act_control->motor_data[trans_motor_number].motor_speed_set = motor_speed;
-				trans_act_control->motor_data[trans_motor_number].give_current = (int16_t)PID_calc(&trans_act_control->trans_speed_pid, 
-																													trans_act_control->motor_data[trans_motor_number].motor_speed, trans_act_control->motor_data[trans_motor_number].motor_speed_set);			
-			}		
+			motor_trans_one_step(trans_act_control,trans_target_distance,trans_motor_number,motor_speed);
+	
 		}
-			
+
 		/*锁死状态，使用角度环单环控制电机锁紧在当前绝对角度下*/		
 		else if(trans_act_control->trans_mode == TRANS_LOCK)
 		{
@@ -529,6 +671,27 @@ static void trans_control_loop(trans_act_t *trans_act_control)
 uint8_t get_trans_mode(void)
 {
 	return trans_act.trans_mode;
+}
+
+/*电机移动一步函数*/
+static void motor_trans_one_step(trans_act_t *trans_act_step, float target, uint8_t number, fp32 speed)
+{
+			if(fabs(trans_act_step->motor_data[number].trans_motor_measure->distance - target) < TRANS_ERR)			
+			//移动即将到位时改用位置环
+			{
+				trans_act_step->motor_data[number].give_current = trans_PID_calc(&trans_act_step->trans_angle_pid, 
+																											                trans_act_step->motor_data[number].trans_motor_measure->distance, 
+																											                target, 
+																											                trans_act_step->motor_data[number].motor_speed);	
+			}
+			else
+			//移动中使用单速度环			
+			{
+				trans_act_step->motor_data[number].motor_speed_set = speed;
+				trans_act_step->motor_data[number].give_current = (int16_t)PID_calc(&trans_act_step->trans_speed_pid, 
+																													trans_act_step->motor_data[number].motor_speed, trans_act_step->motor_data[trans_motor_number].motor_speed_set);			
+			}
+
 }
 /**
   * @brief          "gimbal_control" valiable initialization, include pid initialization, remote control data point initialization, gimbal motors
