@@ -24,6 +24,7 @@
 #include "tim.h"
 #include "usart.h"
 #include "gpio.h"
+#include "bsp_usart.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -119,6 +120,8 @@ int main(void)
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_1);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_2);
   HAL_TIM_PWM_Start(&htim5, TIM_CHANNEL_3);
+	//³õÊ¼»¯usart1DMA
+	usart1_tx_dma_init();
 	//can¹ýÂËÆ÷
 	can_filter_init();
 	HAL_UART_Receive_DMA(&huart3,sbus_buf,18);

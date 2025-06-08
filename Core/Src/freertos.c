@@ -56,6 +56,7 @@ osThreadId ModeSetTaskHandle;
 osThreadId buzzer_taskHandle;
 osThreadId LedFlowTaskHandle;
 osThreadId Yaw_taskHandle;
+osThreadId Data_TransmitHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -71,6 +72,7 @@ void mode_set_task(void const * argument);
 void Buzzer_Task(void const * argument);
 void led_RGB_flow_task(void const * argument);
 void yaw_control_task(void const * argument);
+void USART_Transmit(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -152,6 +154,10 @@ void MX_FREERTOS_Init(void) {
   /* definition and creation of Yaw_task */
   osThreadDef(Yaw_task, yaw_control_task, osPriorityIdle, 0, 128);
   Yaw_taskHandle = osThreadCreate(osThread(Yaw_task), NULL);
+
+  /* definition and creation of Data_Transmit */
+  osThreadDef(Data_Transmit, USART_Transmit, osPriorityNormal, 0, 128);
+  Data_TransmitHandle = osThreadCreate(osThread(Data_Transmit), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -322,6 +328,24 @@ __weak void yaw_control_task(void const * argument)
     osDelay(1);
   }
   /* USER CODE END yaw_control_task */
+}
+
+/* USER CODE BEGIN Header_USART_Transmit */
+/**
+* @brief Function implementing the Data_Transmit thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_USART_Transmit */
+__weak void USART_Transmit(void const * argument)
+{
+  /* USER CODE BEGIN USART_Transmit */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END USART_Transmit */
 }
 
 /* Private application code --------------------------------------------------*/
