@@ -140,22 +140,22 @@ static void mode_set(garbage_mode_t *garbage_mode_set)
 		{
 		if(distance1<10.0f)
 		{
-			vTaskDelay(1000);			
+			vTaskDelay(600);			
 			if(distance1<10.0f)
 			{
 				turn_set_flag=1;
-				vTaskDelay(8000);
+				vTaskDelay(500);
 				turn_set_flag=0;
 			}
 		}		
 		else if(distance2<10.0f)
 		{
-			vTaskDelay(1000);			
+			vTaskDelay(600);			
 			if(distance2<10.0f)
 			{
 				turn_set_flag=2;
 				//5Ãëºó¸´Ô­
-				vTaskDelay(8000);
+				vTaskDelay(5000);
 				turn_set_flag=0;				
 			}
 		}
