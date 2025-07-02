@@ -144,7 +144,7 @@ static void mode_set(garbage_mode_t *garbage_mode_set)
 			if(distance1<10.0f)
 			{
 				turn_set_flag=1;
-				vTaskDelay(500);
+				vTaskDelay(6000);
 				turn_set_flag=0;
 			}
 		}		
@@ -154,8 +154,8 @@ static void mode_set(garbage_mode_t *garbage_mode_set)
 			if(distance2<10.0f)
 			{
 				turn_set_flag=2;
-				//5秒后复原
-				vTaskDelay(5000);
+				//6秒后复原
+				vTaskDelay(6000);
 				turn_set_flag=0;				
 			}
 		}
@@ -165,8 +165,8 @@ static void mode_set(garbage_mode_t *garbage_mode_set)
 			if(distance3<10.0f)
 			{
 				turn_set_flag=3;
-				//5秒后复原
-				vTaskDelay(8000);				
+				//6秒后复原
+				vTaskDelay(6000);				
 				turn_set_flag=0;
 			}				
 		}

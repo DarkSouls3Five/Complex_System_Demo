@@ -100,4 +100,5 @@ typedef struct
   */
 extern void trans_task(void const * argument);
 extern uint8_t get_trans_mode(void);
+extern trans_act_t trans_act;
 #endif

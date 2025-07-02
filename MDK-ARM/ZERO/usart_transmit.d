@@ -53,3 +53,7 @@ zero\usart_transmit.o: E:\MDK528\ARM\ARMCC\Bin\..\include\string.h
 zero\usart_transmit.o: E:\MDK528\ARM\ARMCC\Bin\..\include\stdarg.h
 zero\usart_transmit.o: ../Core/Inc/bsp_usart.h
 zero\usart_transmit.o: ../Applications/struct_typedef.h
+zero\usart_transmit.o: ..\Applications\translate_task.h
+zero\usart_transmit.o: ..\Applications\CAN_bus.h
+zero\usart_transmit.o: ..\Applications\pid.h
+zero\usart_transmit.o: ..\Applications\remote_control.h
