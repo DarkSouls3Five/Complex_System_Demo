@@ -71,7 +71,7 @@ void init_ESP8266(void)
 
     // 建立 UDP 连接
     // 设置实际的远端IP，现假设为 IP 是 192.168.1.100，端口 8088，本地端口不指定，IP需要根据实际情况修改
-    ESP8266_SendString("AT+CIPSTART=\"UDP\",\"192.168.43.80\",8088");
+    ESP8266_SendString("AT+CIPSTART=\"UDP\",\"192.168.43.79\",8088");
     HAL_Delay(1000);
 	
 	// ESP8266_SendString("AT+ATKCLDSTA=\"22495854243484409207\",\"12345678\""); // ??????????????

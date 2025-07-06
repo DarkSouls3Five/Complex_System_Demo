@@ -292,6 +292,7 @@ static void yaw_control_loop(yaw_act_t *yaw_act_control)
 				//Ðý×ªµ½³¯×óÎ»ÖÃ
 					yaw_act_control->motor_data.motor_angle_set = YAW_ANGEL_LEFT;
 			}				
+			
 			yaw_act_control->motor_data.give_current = yaw_PID_calc(&yaw_act_control->yaw_angle_pid, 
 																																				yaw_act_control->motor_data.motor_angle, 
 																																				yaw_act_control->motor_data.motor_angle_set,
